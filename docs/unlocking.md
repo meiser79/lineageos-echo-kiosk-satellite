@@ -131,6 +131,26 @@ The system that was on the Show does not boot on amonet 2, so install the image 
 
 </details>
 
+<details>
+<summary><h2 id="echo-spot-1st-gen">Echo Spot (1st gen)</h2></summary>
+
+Use [R0rt1z2](https://github.com/R0rt1z2)'s amonet package for the Echo Spot (1st gen), built from the [`mt8163-rook` branch](https://github.com/R0rt1z2/amonet/tree/mt8163-rook) of amonet. It unlocks the Spot over USB the same way as on the Echo Show 8 and writes TWRP. It supports a Spot on Fire OS 5.5.6.9, 5.5.5.2 or 5.5.3.4.
+
+### What you need
+
+- The Echo Spot (1st gen), its power adapter and a USB cable that carries data.
+- A computer with Linux, macOS or Windows. The package brings its own `fastboot`.
+
+### Run fastbrick
+
+1. Download R0rt1z2's package for the Echo Spot (1st gen) and extract it.
+2. Put the Spot in fastboot mode as the package's instructions describe and connect it to your computer.
+3. From the extracted folder, run `./fastbrick.sh` on Linux and macOS. On Windows, run `fastbrick.bat`.
+
+`fastbrick` rewrites the Spot's bootloader, so never unplug the Spot while it runs. If the Spot is not in TWRP when `fastbrick` ends, run the package's `fastboot-step.sh`, which writes TWRP and starts it.
+
+</details>
+
 ## Next
 
 The device is ready for its image. [Getting into TWRP](twrp.md) covers starting TWRP and checking its version. The installation is in the device's guide, such as the [Echo Dot guide](echo-dot.md#installing).

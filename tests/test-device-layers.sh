@@ -16,16 +16,19 @@ inherits() {
 inherits biscuit | grep -q 'vendor/kiosk-satellite/config/common.mk' || fail "biscuit does not inherit common.mk"
 ! inherits biscuit | grep -q 'vendor/kiosk-satellite/config/show.mk' || fail "biscuit inherits the Echo Shows' show.mk"
 ! grep -rq 'kiosk-satellite/config/show.mk' device/biscuit sources/device/amazon/biscuit || fail "the Dot's layer pulls in show.mk"
-for show in crown cronos; do
+for show in crown cronos rook; do
   inherits "$show" | grep -q 'vendor/kiosk-satellite/config/common.mk' || fail "$show does not inherit common.mk"
   inherits "$show" | grep -q 'vendor/kiosk-satellite/config/show.mk' || fail "$show does not inherit show.mk"
 done
 
-# Each Echo Show gets its own device layer and not the other's.
-inherits crown | grep -q 'device/kiosk-satellite/crown/device.mk' || fail "crown does not inherit its device layer"
-inherits cronos | grep -q 'device/kiosk-satellite/cronos/device.mk' || fail "cronos does not inherit its device layer"
-! inherits crown | grep -q 'kiosk-satellite/cronos' || fail "crown inherits the Echo Show 5's layer"
-! inherits cronos | grep -q 'kiosk-satellite/crown' || fail "cronos inherits the Echo Show 8's layer"
+# Each Echo Show and the Echo Spot get their own device layer and no other's.
+for show in crown cronos rook; do
+  inherits "$show" | grep -q "device/kiosk-satellite/$show/device.mk" || fail "$show does not inherit its device layer"
+  for other in crown cronos rook; do
+    [[ "$other" == "$show" ]] && continue
+    ! inherits "$show" | grep -q "kiosk-satellite/$other/" || fail "$show inherits $other's layer"
+  done
+done
 
 # One Show's settings in neither shared layer.
 for part in ro.echo.hostname= asr_capture ro.vendor.amznaec.engine= ro.vendor.amznaec.enable= \
