@@ -1,0 +1,31 @@
+rook: Support both A2DP roles
+
+The overlay left out the A2DP source and AVRCP target, so the Spot could
+only take audio from phones. EchoService switches between the two roles
+through bluetooth_disabled_profiles, so the overlay supports both, as
+cronos's does, and the Spot can also play to headphones and speakers.
+
+diff --git a/overlay/packages/apps/Bluetooth/res/values/config.xml b/overlay/packages/apps/Bluetooth/res/values/config.xml
+index 2cf947f..eae49a7 100644
+--- a/overlay/packages/apps/Bluetooth/res/values/config.xml
++++ b/overlay/packages/apps/Bluetooth/res/values/config.xml
+@@ -1,14 +1,12 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+-    <!-- Disable source-side profiles -->
+-    <bool name="profile_supported_a2dp">false</bool>
+-    <bool name="profile_supported_avrcp_target">false</bool>
+-    <bool name="profile_supported_hs_hfp">false</bool>
+-    
+-    <!-- Enable sink-side profiles -->
++    <!-- Both A2DP roles, only one is enabled through bluetooth_disabled_profiles -->
++    <bool name="profile_supported_a2dp">true</bool>
+     <bool name="profile_supported_a2dp_sink">true</bool>
+     <bool name="profile_supported_avrcp_controller">true</bool>
+-    
++    <bool name="profile_supported_avrcp_target">true</bool>
++    <bool name="profile_supported_hs_hfp">false</bool>
++
+     <!-- Audio focus for sink playback -->
+     <bool name="a2dp_sink_automatically_request_audio_focus">true</bool>
+ </resources>

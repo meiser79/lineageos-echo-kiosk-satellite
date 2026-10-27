@@ -1,4 +1,4 @@
-DEVICES := crown cronos checkers athena biscuit donut
+DEVICES := crown cronos checkers athena biscuit donut rook
 
 .PHONY: sync docker stage test check $(DEVICES)
 

@@ -65,6 +65,7 @@ device_name() {
     checkers) echo "Echo Show 5 (1st gen)" ;;
     athena) echo "Echo Show 8 (2nd gen)" ;;
     donut) echo "Echo Dot (3rd gen)" ;;
+    rook) echo "Echo Spot (1st gen)" ;;
   esac
 }
 

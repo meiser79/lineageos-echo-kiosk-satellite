@@ -23,30 +23,29 @@ inherits biscuit | grep -q 'vendor/kiosk-satellite/config/common.mk' || fail "bi
 DONUT_MK=sources/device/amazon/donut/lineage_donut.mk
 grep -q 'vendor/kiosk-satellite/config/common.mk' "$DONUT_MK" || fail "donut does not inherit common.mk"
 grep -q 'device/kiosk-satellite/donut/device.mk' "$DONUT_MK" || fail "donut does not inherit its device layer"
-! grep -q -E 'kiosk-satellite/(config/show.mk|biscuit|athena|crown|cronos|checkers)' "$DONUT_MK" || fail "donut inherits another Echo's layer"
+! grep -q -E 'kiosk-satellite/(config/show.mk|biscuit|athena|crown|cronos|checkers|rook)' "$DONUT_MK" || fail "donut inherits another Echo's layer"
 for dot in biscuit donut; do
   grep -q 'vendor/kiosk-satellite/config/dot.mk' "device/$dot/device.mk" || fail "$dot does not inherit dot.mk"
 done
-! grep -rq 'kiosk-satellite/config/dot.mk' device/crown device/cronos device/checkers device/athena \
+! grep -rq 'kiosk-satellite/config/dot.mk' device/crown device/cronos device/checkers device/athena device/rook \
     common/config/common.mk common/config/show.mk sources/device/amazon/athena || fail "an Echo Show pulls in dot.mk"
 # One Dot's settings are not in the layer both share.
 for part in ro.biscuit.ota.dir media_vol_default flinger_standbytime wall_powered persist.sys.fuse; do
   ! grep -Fq "$part" common/config/dot.mk || fail "dot.mk has $part, which each Dot sets"
 done
-for show in crown cronos checkers; do
+for show in crown cronos checkers rook; do
   inherits "$show" | grep -q 'vendor/kiosk-satellite/config/common.mk' || fail "$show does not inherit common.mk"
   inherits "$show" | grep -q 'vendor/kiosk-satellite/config/show.mk' || fail "$show does not inherit show.mk"
 done
 
-# Each Echo Show gets its own device layer and not the other's.
-inherits crown | grep -q 'device/kiosk-satellite/crown/device.mk' || fail "crown does not inherit its device layer"
-inherits cronos | grep -q 'device/kiosk-satellite/cronos/device.mk' || fail "cronos does not inherit its device layer"
-! inherits crown | grep -q 'kiosk-satellite/cronos' || fail "crown inherits the Echo Show 5's layer"
-! inherits cronos | grep -q 'kiosk-satellite/crown' || fail "cronos inherits the Echo Show 8's layer"
-inherits checkers | grep -q 'device/kiosk-satellite/checkers/device.mk' || fail "checkers does not inherit its device layer"
-! inherits checkers | grep -q -E 'kiosk-satellite/(crown|cronos)' || fail "checkers inherits another Echo Show's layer"
-! inherits crown | grep -q 'kiosk-satellite/checkers' || fail "crown inherits the checkers layer"
-! inherits cronos | grep -q 'kiosk-satellite/checkers' || fail "cronos inherits the checkers layer"
+# Each Echo Show and the Echo Spot get their own device layer and no other's.
+for show in crown cronos checkers rook; do
+  inherits "$show" | grep -q "device/kiosk-satellite/$show/device.mk" || fail "$show does not inherit its device layer"
+  for other in crown cronos checkers rook; do
+    [[ "$other" == "$show" ]] && continue
+    ! inherits "$show" | grep -q "kiosk-satellite/$other/" || fail "$show inherits $other's layer"
+  done
+done
 
 # The Echo Show 8 (2nd gen) has a device tree of its own in sources/, which
 # inherits the layers itself instead of through a patch.
@@ -54,8 +53,8 @@ ATHENA_MK=sources/device/amazon/athena/lineage_athena.mk
 grep -q 'vendor/kiosk-satellite/config/common.mk' "$ATHENA_MK" || fail "athena does not inherit common.mk"
 grep -q 'vendor/kiosk-satellite/config/show.mk' "$ATHENA_MK" || fail "athena does not inherit show.mk"
 grep -q 'device/kiosk-satellite/athena/device.mk' "$ATHENA_MK" || fail "athena does not inherit its device layer"
-! grep -q -E 'kiosk-satellite/(biscuit|crown|cronos|checkers)' "$ATHENA_MK" || fail "athena inherits another Echo's layer"
-for other in biscuit crown cronos checkers; do
+! grep -q -E 'kiosk-satellite/(biscuit|crown|cronos|checkers|rook)' "$ATHENA_MK" || fail "athena inherits another Echo's layer"
+for other in biscuit crown cronos checkers rook; do
   ! inherits "$other" | grep -q 'kiosk-satellite/athena' || fail "$other inherits the athena layer"
 done
 # Only athena's vendor image is a prebuilt one, so only it moves the Wi-Fi

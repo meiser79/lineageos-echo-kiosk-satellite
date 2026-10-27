@@ -20,6 +20,7 @@ MARK = os.path.join(REPO, "common/media/mark.svg")
 OUT = os.path.join(REPO, "common/media")
 
 # Screen heights of the Echo Show 5 (2nd gen) and the Echo Show 8 (1st gen).
+# The Echo Spot (1st gen) takes the Show 5's: its round screen is 480 high.
 # The mark takes this share of the height.
 HEIGHTS = (480, 800)
 MARK_SHARE = 0.45

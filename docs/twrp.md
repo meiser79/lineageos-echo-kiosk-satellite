@@ -1,6 +1,6 @@
 # Getting into TWRP
 
-Every image installs from the TWRP that comes with the device's amonet. [Unlocking](unlocking.md) installs both. This page covers the Echo Dot (2nd gen), both Echo Show 5 generations and the Echo Show 8 (1st gen).
+Every image installs from the TWRP that comes with the device's amonet. [Unlocking](unlocking.md) installs both. This page covers both Echo Dot generations, both Echo Show 5 generations, both Echo Show 8 generations and the Echo Spot (1st gen).
 
 ## Echo Dot (2nd gen)
 
@@ -211,3 +211,31 @@ It must print `3.7.0_9-0`.
 ### One slot
 
 The Show has one copy of each partition, with no slots. An install replaces the system that was there, so if it fails, only TWRP starts until an install succeeds. TWRP's `wipe data` keeps the internal storage in `/sdcard`. The image never writes the recovery partition, so TWRP stays as the unlock installed it.
+
+## Echo Spot (1st gen)
+
+The image installs from the TWRP that comes with R0rt1z2's amonet package for the Spot.
+
+### Starting TWRP
+
+If the Spot is running, connect it over USB and run:
+
+```sh
+adb reboot recovery
+```
+
+`adb devices -l` then lists the Spot as `recovery`. The guide runs everything over `adb shell`. The `twrp` command does what TWRP's buttons do, such as `twrp install` and `twrp wipe`. TWRP has no adb over Wi-Fi, so connect the Spot over USB even if you use adb over Wi-Fi in Android.
+
+If the Spot does not boot, the package's `boot-recovery.sh` starts TWRP over USB.
+
+### Checking the version
+
+```sh
+adb shell getprop ro.twrp.version
+```
+
+System updates install only from TWRP 3.7.0_9-0, the version the Echo Shows' amonet 2 installs. With any other TWRP, an update writes nothing and starts Android again, and EchoService reports why. The Echo Spot image has not been tested yet, so it is not confirmed which TWRP the Spot's package installs. Note the version it prints if you report a problem.
+
+### One slot
+
+The Spot has one copy of each partition, with no slots. An install replaces the system that was there, so if it fails, only TWRP starts until an install succeeds. TWRP's `wipe data` keeps the internal storage in `/sdcard`.

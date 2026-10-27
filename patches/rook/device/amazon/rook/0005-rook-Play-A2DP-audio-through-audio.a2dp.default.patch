@@ -1,0 +1,37 @@
+rook: Play A2DP audio through audio.a2dp.default
+
+The audio policy took A2DP output from the Bluetooth Audio HAL, so the
+Spot connected to headphones but kept playing through its own speaker.
+Use the legacy A2DP module for both directions with the Bluetooth Audio
+HAL off, as cronos does, where headphones and phones both work.
+
+diff --git a/configs/audio_policy_configuration.xml b/configs/audio_policy_configuration.xml
+index 6b8156f..c7e1f86 100644
+--- a/configs/audio_policy_configuration.xml
++++ b/configs/audio_policy_configuration.xml
+@@ -116,11 +116,8 @@
+ 
+         </module>
+ 
+-        <!-- A2dp In Audio HAL -->
+-        <xi:include href="a2dp_in_audio_policy_configuration.xml"/>
+-
+-        <!-- Bluetooth Audio HAL -->
+-        <xi:include href="bluetooth_audio_policy_configuration.xml"/>
++        <!-- A2dp Audio HAL -->
++        <xi:include href="a2dp_audio_policy_configuration.xml"/>
+ 
+         <!-- Usb Audio HAL -->
+         <xi:include href="usb_audio_policy_configuration.xml"/>
+diff --git a/vendor.prop b/vendor.prop
+index 5adda3a..428e47b 100644
+--- a/vendor.prop
++++ b/vendor.prop
+@@ -2,6 +2,7 @@
+ ro.hardware.audio.primary=amazon_wrapper
+ 
+ # Bluetooth
++persist.bluetooth.bluetooth_audio_hal.disabled=true
+ persist.bluetooth.enablenewavrcp=false
+ 
+ # Camera
