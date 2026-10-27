@@ -19,9 +19,9 @@ KEY="${BISCUIT_OTA_KEY:-$HOME/.config/biscuit-ota/release-key.pem}"
 
 case "$(basename "$1")" in
   *biscuit*.zip|*donut*.zip) PUBLIC="$REPO_ROOT/common/dot/ota/release-key.pem" ;;
-  *athena*.zip|*checkers*.zip|*cronos*.zip|*crown*.zip) PUBLIC="$REPO_ROOT/common/ota/release-key.pem" ;;
+  *athena*.zip|*checkers*.zip|*cronos*.zip|*crown*.zip|*rook*.zip) PUBLIC="$REPO_ROOT/common/ota/release-key.pem" ;;
   *)
-    echo "ERROR: name the zip with the device's codename (athena, biscuit, checkers, cronos, crown or donut)" >&2
+    echo "ERROR: name the zip with the device's codename (athena, biscuit, checkers, cronos, crown, donut or rook)" >&2
     exit 1
     ;;
 esac

@@ -13,13 +13,14 @@
 <a href="https://github.com/jxlarrea/lineageos-echo-kiosk-satellite/releases?q=athena"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjxlarrea%2Flineageos-echo-kiosk-satellite%2Fmain%2FCHANGELOG-athena.md&search=%23%23%20%28%5Cd%7B4%7D%5C.%5Cd%2B%5C.%5Cd%2B%29%20-&replace=%241&label=Athena&style=for-the-badge&cacheSeconds=3600&color=5da3a6" alt="Echo Show 8 (2nd gen) release"></a>
 <a href="https://github.com/jxlarrea/lineageos-echo-kiosk-satellite/releases?q=biscuit"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjxlarrea%2Flineageos-echo-kiosk-satellite%2Fmain%2FCHANGELOG-biscuit.md&search=%23%23%20%28%5Cd%7B4%7D%5C.%5Cd%2B%5C.%5Cd%2B%29%20-&replace=%241&label=Biscuit&style=for-the-badge&cacheSeconds=3600&color=c77dff" alt="Echo Dot (2nd gen) release"></a>
 <a href="https://github.com/jxlarrea/lineageos-echo-kiosk-satellite/releases?q=donut"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjxlarrea%2Flineageos-echo-kiosk-satellite%2Fmain%2FCHANGELOG-donut.md&search=%23%23%20%28%5Cd%7B4%7D%5C.%5Cd%2B%5C.%5Cd%2B%29%20-&replace=%241&label=Donut&style=for-the-badge&cacheSeconds=3600&color=d6336c" alt="Echo Dot (3rd gen) release"></a>
+<a href="https://github.com/jxlarrea/lineageos-echo-kiosk-satellite/releases?q=rook"><img src="https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjxlarrea%2Flineageos-echo-kiosk-satellite%2Fmain%2FCHANGELOG-rook.md&search=%23%23%20%28%5Cd%7B4%7D%5C.%5Cd%2B%5C.%5Cd%2B%29%20-&replace=%241&label=Rook&style=for-the-badge&cacheSeconds=3600&color=18bcf2" alt="Echo Spot (1st gen) release"></a>
 </p>
 
 <p align="center">
 <a href="https://buymeacoffee.com/jxlarrea"><img src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a>
 </p>
 
-LineageOS 18.1 (Android 11) images for Amazon Echo devices, tuned to run [Kiosk Satellite](https://github.com/jxlarrea/kiosk-satellite) for Home Assistant. The Echo Shows run the full Kiosk Satellite experience on their screens. The Echo Dot has no screen, so it runs Kiosk Satellite headless as a voice satellite, intercom and speaker. The images for the MT8163 Echos are built from one shared base, [R0rt1z2](https://github.com/R0rt1z2)'s LineageOS 18.1 port in [amazon-oss](https://github.com/amazon-oss). The Echo Show 8 (2nd gen) has a different chip and runs this repository's own port. Every image has the Kiosk Satellite Edition layer on top.
+LineageOS 18.1 (Android 11) images for Amazon Echo devices, tuned to run [Kiosk Satellite](https://github.com/jxlarrea/kiosk-satellite) for Home Assistant. The Echo Shows and the Echo Spot run the full Kiosk Satellite experience on their screens. The Echo Dot has no screen, so it runs Kiosk Satellite headless as a voice satellite, intercom and speaker. The images for the MT8163 Echos are built from one shared base, [R0rt1z2](https://github.com/R0rt1z2)'s LineageOS 18.1 port in [amazon-oss](https://github.com/amazon-oss). The Echo Show 8 (2nd gen) has a different chip and runs this repository's own port. Every image has the Kiosk Satellite Edition layer on top.
 
 <div align="center">
 
@@ -31,6 +32,7 @@ LineageOS 18.1 (Android 11) images for Amazon Echo devices, tuned to run [Kiosk 
 | [Echo Show 5 (2nd gen)](docs/echo-show-5.md) | `cronos` | C76N8S |
 | [Echo Show 8 (1st gen)](docs/echo-show-8.md) | `crown` | C7H6N3 |
 | [Echo Show 8 (2nd gen)](docs/echo-show-8-2nd-gen.md) | `athena` | A8H3N2 |
+| [Echo Spot (1st gen)](docs/echo-spot.md) | `rook` | VN94DQ |
 
 </div>
 

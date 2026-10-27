@@ -4,7 +4,7 @@
 
 [R0rt1z2](https://github.com/R0rt1z2) made the shared base every device builds on: LineageOS 18.1 for the MT8163 Echos, the 4.9 kernel, `mt8163-common`, `hardware/amazon` and the vendor trees in [amazon-oss](https://github.com/amazon-oss). R0rt1z2 also continued the Echo Dot's port of amonet, released it with TWRP and wrote kaeru.
 
-The Echo Show 5 (2nd gen) image is R0rt1z2's `cronos` port in amazon-oss and the Echo Show 8 (1st gen) image is R0rt1z2's `crown` port. The Echo Show 5 (1st gen) image is the `checkers` port in amazon-oss, by R0rt1z2 and [bengris32](https://github.com/bengris32). Each brings its Show's screen, camera and Bluetooth, with this repository's Kiosk Satellite Edition layer on top.
+The Echo Show 5 (2nd gen) image is R0rt1z2's `cronos` port in amazon-oss, the Echo Show 8 (1st gen) image is R0rt1z2's `crown` port and the Echo Spot (1st gen) image is R0rt1z2's `rook` port. The Echo Show 5 (1st gen) image is the `checkers` port in amazon-oss, by R0rt1z2 and [bengris32](https://github.com/bengris32). Each brings its device's screen, camera and Bluetooth, with this repository's Kiosk Satellite Edition layer on top. The Spot's Wi-Fi driver is bengris32's `amzn-bcmdhd` in amazon-oss.
 
 The Echo Show 8 (2nd gen) image is this repository's own port and uses none of amazon-oss's trees. Its kernel is built from Amazon's source release for the Show, in [android_kernel_amazon_mt8183](https://github.com/jxlarrea/android_kernel_amazon_mt8183). R0rt1z2's saiyaku unlock and TWRP are what make installing it possible and R0rt1z2's own LineageOS 18.1 release for the Show proved it could run there.
 
