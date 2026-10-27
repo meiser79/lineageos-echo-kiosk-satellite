@@ -1,0 +1,46 @@
+From 04346e8c2aebdce7834c5b3ee4791ac69a1b3536 Mon Sep 17 00:00:00 2001
+From: Peter Meiser <peter.meiser@gmx.com>
+Date: Wed, 28 Oct 2026 08:02:17 +0100
+Subject: [PATCH] wifi_hal: Keep a ring entry within the data that arrived
+
+SetLogHandler passed on the entry_size from the ring entry header without
+checking it against the netlink attribute. The Echo Spot's bcmdhd sends
+ring data whose header does not match, so the Wi-Fi HAL service copied
+past the end of the buffer and crashed every minute or two, taking Wi-Fi
+down each time. Skip data shorter than the header and pass on no more
+than arrived.
+
+Change-Id: I6fb6eb21149f3cf413170c94ee08e9a5b7629b5f
+---
+ bcmdhd/wifi_hal/wifi_logger.cpp | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/bcmdhd/wifi_hal/wifi_logger.cpp b/bcmdhd/wifi_hal/wifi_logger.cpp
+index e35bf9b..ecf9ed3 100755
+--- a/bcmdhd/wifi_hal/wifi_logger.cpp
++++ b/bcmdhd/wifi_hal/wifi_logger.cpp
+@@ -679,9 +679,20 @@ public:
+                 char *pBuff;
+                 wifi_ring_buffer_entry *buffer_entry = 
+                             (wifi_ring_buffer_entry *) buffer;
++                /* Older drivers, such as the Echo Spot's, send ring data
++                 * whose header does not match: never pass on more than
++                 * arrived, or the copy runs past the netlink buffer. */
++                if (buffer == NULL || buffer_size < (int)sizeof(*buffer_entry)) {
++                    return NL_SKIP;
++                }
++                int entry_size = buffer_entry->entry_size;
++                int max_size = buffer_size - (int)sizeof(*buffer_entry);
++                if (entry_size > max_size) {
++                    entry_size = max_size;
++                }
+                 pBuff = (char *) (buffer_entry + 1);
+                 (*mHandler.on_ring_buffer_data)((char *)status.name, pBuff, 
+-                    buffer_entry->entry_size, &status);
++                    entry_size, &status);
+             }
+         } else {
+             ALOGE("Unknown Event");
+-- 
+2.53.0
+

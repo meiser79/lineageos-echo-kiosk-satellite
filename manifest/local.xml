@@ -14,9 +14,11 @@
 
   <project path="device/amazon/crown"         name="android_device_amazon_crown"         remote="amazon-oss" />
   <project path="device/amazon/cronos"        name="android_device_amazon_cronos"        remote="amazon-oss" />
+  <project path="device/amazon/rook"          name="android_device_amazon_rook"          remote="amazon-oss" />
   <project path="device/amazon/mt8163-common" name="android_device_amazon_mt8163-common" remote="amazon-oss" />
 
   <project path="kernel/amazon/mt8163-4.9"    name="android_kernel_amazon_mt8163"        remote="amazon-oss" />
+  <project path="kernel/amazon/bcmdhd"        name="android_kernel_amazon_amzn-bcmdhd"   remote="amazon-oss" />
   <project path="kernel/amazon/mt66xx-common" name="android_kernel_amazon_mt66xx-common" remote="amazon-oss" />
   <project path="kernel/amazon/mt66xx-bt"     name="android_kernel_amazon_mt66xx-bt"     remote="amazon-oss" />
   <project path="kernel/amazon/mt66xx-wifi"   name="android_kernel_amazon_mt66xx-wifi"   remote="amazon-oss" />
@@ -29,6 +31,7 @@
 
   <project path="vendor/amazon/crown"         name="android_vendor_amazon_crown"         remote="amazon-oss" />
   <project path="vendor/amazon/cronos"        name="android_vendor_amazon_cronos"        remote="amazon-oss" />
+  <project path="vendor/amazon/rook"          name="android_vendor_amazon_rook"          remote="amazon-oss" />
   <project path="vendor/amazon/mt8163-common" name="android_vendor_amazon_mt8163-common" remote="amazon-oss" />
 
   <!-- The LineageOS patches every amazon-oss build needs. stage-tree.sh applies them. -->

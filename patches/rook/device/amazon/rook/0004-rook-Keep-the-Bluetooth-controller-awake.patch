@@ -1,0 +1,22 @@
+rook: Keep the Bluetooth controller awake
+
+The Bluetooth HAL turns on the BCM43569's sleep mode, where the host has to
+assert BT_WAKE before each command. Nothing can on the Spot: its devicetree
+has no wake GPIO and the kernel no bluesleep. A command sent once the
+controller had dozed off was never answered, so the stack timed out and
+restarted Bluetooth, every time Kiosk Satellite's Bluetooth proxy started a
+scan after a quiet spell. The Spot runs on mains power, so the controller
+now stays awake.
+
+diff --git a/configs/vnd_rook.txt b/configs/vnd_rook.txt
+index b9beaf1..bfa7ddb 100644
+--- a/configs/vnd_rook.txt
++++ b/configs/vnd_rook.txt
+@@ -5,6 +5,7 @@ RFKILL_UNBLOCK_WAIT_TIME = 150
+ RFKILL_BLOCK_WAIT_TIME = 50
+ UART_TARGET_BAUD_RATE = 3000000
+ LPM_IDLE_TIMEOUT_MULTIPLE = 5
++LPM_SLEEP_MODE = 0
+ BTVND_DBG = FALSE
+ BTHW_DBG = TRUE
+ VNDUSERIAL_DBG = FALSE

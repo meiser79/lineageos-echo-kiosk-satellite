@@ -14,8 +14,8 @@ DEVICE="${DEVICE:-}"
 OUT="$TREE/out/target/product/$DEVICE"
 
 case "$DEVICE" in
-  biscuit|crown|cronos) ;;
-  *) echo "ERROR: set DEVICE to biscuit, crown or cronos" >&2; exit 2 ;;
+  biscuit|crown|cronos|rook) ;;
+  *) echo "ERROR: set DEVICE to biscuit, crown, cronos or rook" >&2; exit 2 ;;
 esac
 
 TARGET_FILES="${1:-$(ls "$OUT"/obj/PACKAGING/target_files_intermediates/lineage_"$DEVICE"-target_files-*.zip 2>/dev/null | head -n 1)}"
@@ -111,8 +111,8 @@ else
     "system_ext/priv-app/Camera2/" "system_ext/priv-app/Gallery2/" "product/app/Eleven/"
 fi
 
-# What sets the two Echo Shows apart (device/<device>/device.mk and
-# patches/<device>), so one Show's settings never reach the other's image.
+# What sets the Echo Shows and the Echo Spot apart (device/<device>/device.mk and
+# patches/<device>), so one device's settings never reach another's image.
 # Each value is what the device sets, or empty where it sets none.
 expect() {
   local where="$1" name="$2" want="$3" got
@@ -165,6 +165,26 @@ case "$DEVICE" in
     expect prop ro.vendor.amznaec.engine 2
     expect prop ro.config.media_vol_default 10
     [[ "$(asr_passthrough)" == true ]] || fail "asp.cfg has the ASR pipeline on, which is the Echo Show 8's"
+    wrapper_has_asr_capture && fail "the audio HAL wrapper has the Echo Show 8's ASR capture"
+    boot_animation 480
+    ;;
+  rook)
+    # The Spot's libasp has no asp.cfg and reads passthrough from properties.
+    # Its Broadcom Wi-Fi driver (kernel/amazon/bcmdhd), which init.insmod.cfg loads.
+    must_have "vendor/lib/modules/amzn-bcmdhd\.ko$"
+    expect default_prop ro.echo.hostname echo-spot-ks
+    # No privacy chip and no light for one: Android's usual button.
+    expect default_prop ro.echo.privacy_hold ""
+    expect default_prop ro.config.power_privacy_state ""
+    expect default_prop ro.echo.button_long_press 1
+    expect default_prop persist.sys.audio.noise_suppression ""
+    expect prop ro.vendor.audio.asr_capture ""
+    expect prop ro.vendor.audio.asr_capture_gain_db ""
+    expect prop ro.vendor.amznaec.enable ""
+    expect prop ro.vendor.amznaec.engine 2
+    expect prop ro.config.media_vol_default 10
+    expect prop persist.asp.asr.passthrough true
+    expect prop persist.asp.voice.passthrough true
     wrapper_has_asr_capture && fail "the audio HAL wrapper has the Echo Show 8's ASR capture"
     boot_animation 480
     ;;

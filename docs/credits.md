@@ -4,7 +4,7 @@
 
 [R0rt1z2](https://github.com/R0rt1z2) made the shared base every device builds on: LineageOS 18.1 for the MT8163 Echos, the 4.9 kernel, `mt8163-common`, `hardware/amazon` and the vendor trees in [amazon-oss](https://github.com/amazon-oss). R0rt1z2 also continued the Echo Dot's port of amonet, released it with TWRP and wrote kaeru.
 
-The Echo Show 5 (2nd gen) image is R0rt1z2's `cronos` port in amazon-oss and the Echo Show 8 (1st gen) image is R0rt1z2's `crown` port. Each brings its Show's screen, camera and Bluetooth, with this repository's Kiosk Satellite Edition layer on top.
+The Echo Show 5 (2nd gen) image is R0rt1z2's `cronos` port in amazon-oss, the Echo Show 8 (1st gen) image is R0rt1z2's `crown` port and the Echo Spot (1st gen) image is R0rt1z2's `rook` port. Each brings its device's screen, camera and Bluetooth, with this repository's Kiosk Satellite Edition layer on top. The Spot's Wi-Fi driver is [bengris32](https://github.com/bengris32)'s `amzn-bcmdhd` in amazon-oss.
 
 ## hkfuertes' CM14.1 port
 

@@ -503,6 +503,7 @@ public final class Commands extends BroadcastReceiver {
                 if (privacy.state() != 1 && !privacy.turnOn()) return "failed: cannot turn privacy on";
                 return privacyStatus();
             case "timeout":
+                if (!privacy.present()) return "no privacy button";
                 String value = arg(args, 1);
                 if (value.isEmpty()) return privacyTimeoutStatus();
                 if (value.equals("off")) {
@@ -576,8 +577,17 @@ public final class Commands extends BroadcastReceiver {
         } else {
             android = "a short press turns the screen on and off, holding it does action " + longPress;
         }
+        // The Echo Spot has no privacy chip, so the button is Android's alone.
+        if (!hasPrivacyChip()) return android;
         boolean hold = SystemProperties.getBoolean("ro.echo.privacy_hold", false);
         return android + ". The privacy chip turns privacy on and off on " + (hold ? "a hold" : "a short press");
+    }
+
+    private static boolean hasPrivacyChip() {
+        for (String path : PRIVACY_STATES) {
+            if (new File(path).exists()) return true;
+        }
+        return false;
     }
 
     private static String readLine(String path) {

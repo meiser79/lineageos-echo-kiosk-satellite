@@ -1,6 +1,6 @@
 # Updates from your own server
 
-EchoService on the Echo Shows and BiscuitService on the Echo Dot check GitHub for new releases of the image. An Echo on a network without Internet access, such as a VLAN that only reaches Home Assistant, cannot reach GitHub. Point it at a folder on your own web server instead, such as a NAS. EchoService and BiscuitService then check that folder and download new releases from it. Everything else works as before: the **Firmware** update entity in Home Assistant, the update in Kiosk Satellite's remote admin and the checks against the release signature.
+EchoService on the Echo Shows and the Echo Spot and BiscuitService on the Echo Dot check GitHub for new releases of the image. An Echo on a network without Internet access, such as a VLAN that only reaches Home Assistant, cannot reach GitHub. Point it at a folder on your own web server instead, such as a NAS. EchoService and BiscuitService then check that folder and download new releases from it. Everything else works as before: the **Firmware** update entity in Home Assistant, the update in Kiosk Satellite's remote admin and the checks against the release signature.
 
 Kiosk Satellite updates itself on its own. Its [custom repository](https://github.com/jxlarrea/kiosk-satellite/blob/main/docs/updates.md#custom-repository) does the same for its updates. Its list is `releases.json`, so both can share one folder.
 
@@ -12,7 +12,7 @@ Kiosk Satellite updates itself on its own. Its [custom repository](https://githu
 | `lineageos-echo-kiosk-satellite-<release>-<codename>.zip` | The release for each device you have, under the name GitHub gives it. |
 | `lineageos-echo-kiosk-satellite-<release>-<codename>.zip.sig` | The release signature for each zip. A release without it does not install. |
 
-The codenames are `biscuit` for the Echo Dot (2nd gen), `cronos` for the Echo Show 5 (2nd gen) and `crown` for the Echo Show 8 (1st gen).
+The codenames are `biscuit` for the Echo Dot (2nd gen), `cronos` for the Echo Show 5 (2nd gen), `crown` for the Echo Show 8 (1st gen) and `rook` for the Echo Spot (1st gen).
 
 ## Mirror the newest releases
 
@@ -37,7 +37,7 @@ Run it again for each new release. You can delete older zips, since EchoService 
 
 ## Point the Echo at the folder
 
-Run this once for each Echo, with the address of `echo-releases.json` in your folder. On an Echo Show:
+Run this once for each Echo, with the address of `echo-releases.json` in your folder. On an Echo Show or the Echo Spot:
 
 ```sh
 adb shell setprop persist.echo.ota.releases http://nas.local/echo/echo-releases.json

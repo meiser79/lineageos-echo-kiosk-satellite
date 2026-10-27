@@ -49,6 +49,7 @@ DEVICES = {
     "crown": {"name": "Echo Show 8 (1st gen)", "kind": "show", "channels": 6, "mics": 4},
     "cronos": {"name": "Echo Show 5 (2nd gen)", "kind": "show", "channels": 4, "mics": 2},
     "biscuit": {"name": "Echo Dot (2nd gen)", "kind": "dot", "channels": 9, "mics": 7},
+    "rook": {"name": "Echo Spot (1st gen)", "kind": "show", "channels": 6, "mics": 4},
 }
 
 # The minimum every release must reach, from the Echo Show 8 tuning of

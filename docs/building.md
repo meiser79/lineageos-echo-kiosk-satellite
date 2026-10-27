@@ -31,7 +31,7 @@ make biscuit
 docker logs -f lineage-18.1-biscuit-build
 ```
 
-`make biscuit` stages the tree and starts a detached `lineage-18.1-biscuit-build` container that runs `m bacon`. The zip lands in `workspace/lineage-18.1/out/target/product/biscuit/`. Check the log for `#### build completed successfully` instead of trusting an exit code. `CLEAN=1 make biscuit` empties the device's output folder first, which release builds need (see [Releases](#releases)). `make crown` does the same for the Echo Show 8 once its image is ready.
+`make biscuit` stages the tree and starts a detached `lineage-18.1-biscuit-build` container that runs `m bacon`. The zip lands in `workspace/lineage-18.1/out/target/product/biscuit/`. Check the log for `#### build completed successfully` instead of trusting an exit code. `CLEAN=1 make biscuit` empties the device's output folder first, which release builds need (see [Releases](#releases)). `make cronos`, `make crown` and `make rook` do the same for the Echo Show 5, the Echo Show 8 and the Echo Spot.
 
 `make stage DEVICE=biscuit` only stages the tree, which is useful before building a single module by hand. `BUILD_TARGET=<module> DEVICE=biscuit scripts/build.sh` builds one module in the container.
 
@@ -62,7 +62,7 @@ Each device has releases of its own, with a version of its own, tagged with its 
 
 A device's updater only looks at its own tags.
 
-Each device has its own changelog: [CHANGELOG-biscuit.md](../CHANGELOG-biscuit.md), [CHANGELOG-cronos.md](../CHANGELOG-cronos.md) and [CHANGELOG-crown.md](../CHANGELOG-crown.md). The release a build is comes from the newest release heading in the device's changelog, such as `## 2026.10.11 - 2026-10-25`. While a `## Unreleased` heading is above it, the build is that release with `-dev` after it. Before the device's first release it is `0.0.0-dev`. The image reports it as `ro.biscuit.release` on the Echo Dot and `ro.echo.release` on the Echo Shows. System updates compare it with the device's releases on GitHub. `device_name` in `scripts/build.sh` holds the name each device's releases go by on GitHub.
+Each device has its own changelog: [CHANGELOG-biscuit.md](../CHANGELOG-biscuit.md), [CHANGELOG-cronos.md](../CHANGELOG-cronos.md), [CHANGELOG-crown.md](../CHANGELOG-crown.md) and [CHANGELOG-rook.md](../CHANGELOG-rook.md). The release a build is comes from the newest release heading in the device's changelog, such as `## 2026.10.11 - 2026-10-25`. While a `## Unreleased` heading is above it, the build is that release with `-dev` after it. Before the device's first release it is `0.0.0-dev`. The image reports it as `ro.biscuit.release` on the Echo Dot and `ro.echo.release` on the Echo Shows. System updates compare it with the device's releases on GitHub. `device_name` in `scripts/build.sh` holds the name each device's releases go by on GitHub.
 
 To make a release, here of the Echo Dot. For an Echo Show, use its codename and name instead, such as `cronos` and `Echo Show 5 (2nd gen)`:
 

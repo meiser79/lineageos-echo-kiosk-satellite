@@ -1,0 +1,13 @@
+# Echo Spot (1st gen) changelog
+
+All notable changes to the Echo Spot (1st gen) (`rook`) image are documented here. The [Echo Dot (2nd gen)](CHANGELOG-biscuit.md), [Echo Show 5 (2nd gen)](CHANGELOG-cronos.md) and [Echo Show 8 (1st gen)](CHANGELOG-crown.md) have their own.
+
+## 2026.10.1 - 2026-10-28
+
+### Added
+- **Echo Spot (1st gen) on LineageOS 18.1.** The repository builds R0rt1z2's amazon-oss `rook` tree with the Kiosk Satellite Edition layer the Echo Shows have: EchoService, Kiosk Satellite on first boot, Amazon's wake words, the echo canceller, Bluetooth both ways, system updates and the same debloat. The model reads Echo Spot (KS). EchoService names the Spot `echo-spot-ks` and the end of its serial on the network.
+- **The microphones pass through Amazon's ASR and Voice pipelines**, as on the Echo Show 5, so Amazon's own echo canceller, beamformer and level normalization no longer fight the Kiosk Satellite Edition's. The Spot's audio processor is older than the Shows' and has no `asp.cfg`. It reads `persist.asp.asr.passthrough` and `persist.asp.voice.passthrough` instead, which the image sets to `true`.
+- **Android's usual button on the Spot.** A short press turns the screen on and off and holding the button opens the power menu. The Spot has no privacy chip and no light that would show privacy is on, so the image has no privacy mode, and `echo_service privacy` and its `on` and `timeout` commands answer `no privacy button`. `echo_service button press` makes a hold do nothing.
+- **Bluetooth both ways on the Spot.** The rook tree's Bluetooth settings left out playing to headphones and speakers and the controls for them. The Spot now takes the Echo Show 5's, so it plays to Bluetooth headphones and speakers as well as taking audio from phones.
+- **The kernel version and Android's build string name the release.** The kernel says `4.9.337-kiosksatellite-rook-<release>`, such as `4.9.337-kiosksatellite-rook-2026.10.1`, with build `#1`, as on the Echo Shows. Android's build number is the release too, as in `lineage_rook-userdebug 11 RQ3A.211001.001 2026.10.1 test-keys`, and so is the build fingerprint.
+- **The Echo Spot guide.** [docs/echo-spot.md](docs/echo-spot.md) covers installing, setting up and updating the Spot, its button, the screen, volume, Bluetooth, the time server and time zone, and device commands. It notes that a single tap wakes the Spot's screen, as on Fire OS, so Android's Double tap to wake setting does nothing there. Unlocking and Getting into TWRP have sections for the Spot. [Updates from your own server](docs/offline-updates.md) covers a Spot on a network without Internet access.
