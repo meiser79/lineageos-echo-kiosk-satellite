@@ -138,9 +138,15 @@ else
   printf '%s\n' "$manifest" >"$STATE_FILE"
 fi
 
-# Blobs a device takes from its own stock firmware instead of amazon-oss.
-if [[ -x "$REPO_ROOT/scripts/extract-$DEVICE-blobs.sh" ]]; then
-  LINEAGE_TREE="$TREE" "$REPO_ROOT/scripts/extract-$DEVICE-blobs.sh"
-fi
+# Blobs a device takes from stock firmware instead of amazon-oss. Every Echo
+# takes the Echo Dot's: common.mk inherits Amazon's wake word engine from
+# its pryon-vendor.mk.
+devices=(biscuit)
+[[ "$DEVICE" == biscuit ]] || devices+=("$DEVICE")
+for device in "${devices[@]}"; do
+  if [[ -x "$REPO_ROOT/scripts/extract-$device-blobs.sh" ]]; then
+    LINEAGE_TREE="$TREE" "$REPO_ROOT/scripts/extract-$device-blobs.sh"
+  fi
+done
 
 echo "Staged the Kiosk Satellite Edition layer and patches for $DEVICE."
