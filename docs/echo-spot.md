@@ -216,6 +216,13 @@ Bluetooth is on. Android 11 can either take audio from phones or play to headpho
 
 Switching between the two restarts Bluetooth, which drops what was connected. `adb logcat -s EchoBluetooth` shows how a `bt connect` went. Kiosk Satellite's Bluetooth proxy for Home Assistant keeps scanning in both.
 
+The Spot's Bluetooth chip holds Bluetooth audio back while a scan window that has a pause after it lasts. Android's balanced scan, the proxy's default, scans for one second every four seconds, which made Bluetooth audio stutter while the proxy ran. A fresh install scans for 30 ms every 120 ms instead, the same share of time in short windows. The proxy's Continuous mode scans without pause and plays cleanly as it is. To change the balanced scan, set its window and interval in milliseconds. A new scan picks them up, so turn the proxy off and on or restart Bluetooth afterward:
+
+```sh
+adb shell settings put global ble_scan_balanced_window_ms 30
+adb shell settings put global ble_scan_balanced_interval_ms 120
+```
+
 ### Time
 
 - **Network time.** Android sets the clock over NTP from `time.android.com` at every boot and once a day after that. To use another NTP server, such as your router or a time server on your network, set its name or IP address:

@@ -177,6 +177,9 @@ case "$DEVICE" in
     expect default_prop ro.echo.privacy_hold ""
     expect default_prop ro.config.power_privacy_state ""
     expect default_prop ro.echo.button_long_press 1
+    # Balanced BLE scans in short windows, so the Broadcom controller keeps A2DP going.
+    expect default_prop ro.echo.ble_scan_balanced_window_ms 30
+    expect default_prop ro.echo.ble_scan_balanced_interval_ms 120
     expect default_prop persist.sys.audio.noise_suppression ""
     expect prop ro.vendor.audio.asr_capture ""
     expect prop ro.vendor.audio.asr_capture_gain_db ""
