@@ -137,26 +137,32 @@ done
 
 # Amazon's other wake word models, every locale. DAVS hands them only to a
 # registered Echo, so they come from the private amazon-davs-models
-# repository, checked against blobs/biscuit/davs-models.manifest.
+# repository, checked against blobs/biscuit/davs-models.manifest. Without a
+# checkout the image has only the firmware's en-US Alexa model: biscuit-pryond
+# skips the model sets locales.txt names that are not there. DAVS_MANIFEST
+# names another list, for models taken from an image the build already
+# changed.
 DAVS_DIR="${DAVS_MODELS:-$REPO_ROOT/../amazon-davs-models}"
-[[ -d "$DAVS_DIR" ]] || {
-  echo "ERROR: no DAVS models at $DAVS_DIR: check out amazon-davs-models there or set DAVS_MODELS" >&2; exit 1;
-}
-davs_count=0
-while IFS=: read -r path expected_sha expected_size; do
-  [[ -z "$path" || "$path" == \#* ]] && continue
-  [[ "$path" != /* && "$path" != *".."* ]] || { echo "ERROR: unsafe path in the DAVS manifest: $path" >&2; exit 1; }
-  file="$DAVS_DIR/$path"
-  [[ -f "$file" ]] || { echo "ERROR: missing DAVS model file: $path" >&2; exit 1; }
-  [[ "$(stat -c %s "$file")" == "$expected_size" ]] || { echo "ERROR: wrong size: $path" >&2; exit 1; }
-  [[ "$(sha256sum "$file" | awk '{print $1}')" == "$expected_sha" ]] || {
-    echo "ERROR: sha256 mismatch: $path" >&2; exit 1;
-  }
-  install -D -m 0644 "$file" "$TMP/proprietary/etc/pryon/$path"
-  pryon_files+=("    vendor/amazon/biscuit/proprietary/etc/pryon/$path:\$(TARGET_COPY_OUT_SYSTEM)/etc/pryon/$path")
-  ((davs_count += 1))
-done < "$REPO_ROOT/blobs/biscuit/davs-models.manifest"
-[[ "$davs_count" -gt 0 ]] || { echo "ERROR: the DAVS manifest lists no files" >&2; exit 1; }
+DAVS_MANIFEST="${DAVS_MANIFEST:-$REPO_ROOT/blobs/biscuit/davs-models.manifest}"
+if [[ ! -d "$DAVS_DIR" ]]; then
+  echo "WARNING: no DAVS models at $DAVS_DIR, so only the en-US Alexa wake word. Check out amazon-davs-models there or set DAVS_MODELS for the rest." >&2
+else
+  davs_count=0
+  while IFS=: read -r path expected_sha expected_size; do
+    [[ -z "$path" || "$path" == \#* ]] && continue
+    [[ "$path" != /* && "$path" != *".."* ]] || { echo "ERROR: unsafe path in the DAVS manifest: $path" >&2; exit 1; }
+    file="$DAVS_DIR/$path"
+    [[ -f "$file" ]] || { echo "ERROR: missing DAVS model file: $path" >&2; exit 1; }
+    [[ "$(stat -c %s "$file")" == "$expected_size" ]] || { echo "ERROR: wrong size: $path" >&2; exit 1; }
+    [[ "$(sha256sum "$file" | awk '{print $1}')" == "$expected_sha" ]] || {
+      echo "ERROR: sha256 mismatch: $path" >&2; exit 1;
+    }
+    install -D -m 0644 "$file" "$TMP/proprietary/etc/pryon/$path"
+    pryon_files+=("    vendor/amazon/biscuit/proprietary/etc/pryon/$path:\$(TARGET_COPY_OUT_SYSTEM)/etc/pryon/$path")
+    ((davs_count += 1))
+  done < "$DAVS_MANIFEST"
+  [[ "$davs_count" -gt 0 ]] || { echo "ERROR: the DAVS manifest lists no files" >&2; exit 1; }
+fi
 
 # Amazon's models hear "stop" only for a few seconds after the wake word: the
 # spotter starts asleep, where STOP does not count, and the firmware's Alexa

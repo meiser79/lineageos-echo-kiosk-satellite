@@ -65,7 +65,7 @@ grep -qx 'two crown' "$TREE/device/amazon/crown/lineage_crown.mk" || fail "devic
 [[ -f "$TREE/vendor/kiosk-satellite/config/common.mk" ]] || fail "common layer not staged"
 [[ -f "$TREE/device/kiosk-satellite/crown/device.mk" ]] || fail "device layer not staged"
 
-stage | grep -q 'SKIP sources and patches unchanged' || fail "unchanged patches were applied again"
+[[ "$(stage)" == *'SKIP sources and patches unchanged'* ]] || fail "unchanged patches were applied again"
 
 # Dropping the added file from the patch must remove it from the tree.
 cat >"$REPO/patches/crown/device/amazon/crown/0001-two.patch" <<'EOF'
