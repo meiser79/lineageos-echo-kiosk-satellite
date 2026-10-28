@@ -41,3 +41,14 @@ PRODUCT_PROPERTY_OVERRIDES += \
 # the power menu. echo_service button press makes a hold do nothing.
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.echo.button_long_press=1
+
+# Balanced BLE scans in short windows, which EchoService sets on a fresh
+# install. Android's balanced scan, the default of Kiosk Satellite's
+# Bluetooth proxy, scans for a second every four, and the Spot's Broadcom
+# controller holds the A2DP link back for about 135 ms at a time during that
+# second, so both Bluetooth directions stuttered. The same share of airtime
+# in 30 ms windows leaves it room. A scan without pause, low latency, which
+# Kiosk Satellite calls Continuous, plays cleanly as it is.
+PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
+    ro.echo.ble_scan_balanced_window_ms=30 \
+    ro.echo.ble_scan_balanced_interval_ms=120

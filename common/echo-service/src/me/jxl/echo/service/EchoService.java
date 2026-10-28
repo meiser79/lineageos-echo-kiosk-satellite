@@ -141,6 +141,20 @@ public class EchoService extends Service {
             Settings.Global.putInt(context.getContentResolver(), Settings.Global.POWER_BUTTON_LONG_PRESS,
                     SystemProperties.getInt("ro.echo.button_long_press", Commands.LONG_PRESS_POWER_SCREEN));
         }
+        // BLE scan windows and intervals where the device sets them
+        // (ro.echo.<setting>). A Broadcom controller gives a whole scan
+        // window to the scanner, so Android's default one second window held
+        // up A2DP on the Echo Spot. Bluetooth reads them when a scan starts.
+        for (String key : new String[] {
+                Settings.Global.BLE_SCAN_BALANCED_WINDOW_MS,
+                Settings.Global.BLE_SCAN_BALANCED_INTERVAL_MS,
+                Settings.Global.BLE_SCAN_LOW_LATENCY_WINDOW_MS,
+                Settings.Global.BLE_SCAN_LOW_LATENCY_INTERVAL_MS }) {
+            int ms = SystemProperties.getInt("ro.echo." + key, 0);
+            if (ms > 0 && Settings.Global.getString(context.getContentResolver(), key) == null) {
+                Settings.Global.putInt(context.getContentResolver(), key, ms);
+            }
+        }
         // A screen that is off stays dark, with no clock on it. echo_service
         // screen ambient on brings LineageOS's ambient display back.
         for (String key : new String[] { Settings.Secure.DOZE_ALWAYS_ON, Settings.Secure.DOZE_ENABLED }) {
