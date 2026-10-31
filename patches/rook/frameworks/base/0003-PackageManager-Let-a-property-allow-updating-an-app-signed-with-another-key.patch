@@ -1,0 +1,82 @@
+PackageManager: Let a property allow updating an app signed with another key
+
+Android only updates an app with an APK signed with the same key, so
+testing a build of Kiosk Satellite signed with another key meant
+uninstalling it first, which loses its data and its device owner status.
+
+While persist.echo.pm.allow_resign is true, an app that is not a system
+app may be updated with an APK signed with another key. It keeps its
+data, its permissions, the permissions it declares and its device owner
+status. System apps keep the usual check, and with the property unset
+nothing changes.
+
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index a968b447..c751e69f 100644
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -129,6 +129,7 @@ import static com.android.server.pm.PackageManagerServiceUtils.deriveAbiOverride
+ import static com.android.server.pm.PackageManagerServiceUtils.dumpCriticalInfo;
+ import static com.android.server.pm.PackageManagerServiceUtils.getCompressedFiles;
+ import static com.android.server.pm.PackageManagerServiceUtils.getLastModifiedTime;
++import static com.android.server.pm.PackageManagerServiceUtils.isResignAllowed;
+ import static com.android.server.pm.PackageManagerServiceUtils.logCriticalInfo;
+ import static com.android.server.pm.PackageManagerServiceUtils.makeDirRecursive;
+ import static com.android.server.pm.PackageManagerServiceUtils.verifySignatures;
+@@ -17675,7 +17676,11 @@ public class PackageManagerService extends IPackageManager.Stub
+                             }
+                             sigsOk = true;
+                         } else {
+-                            sigsOk = false;
++                            // An app updated with another key under
++                            // persist.echo.pm.allow_resign keeps its own permissions.
++                            sigsOk = sourcePackageSetting != null
++                                    && sourcePackageName.equals(parsedPackage.getPackageName())
++                                    && isResignAllowed(sourcePackageSetting);
+                         }
+                     }
+                     if (!sigsOk) {
+@@ -17856,7 +17861,8 @@ public class PackageManagerService extends IPackageManager.Stub
+                                 SigningDetails.CertCapabilities.INSTALLED_DATA)
+                                 && !oldPackage.getSigningDetails().checkCapability(
+                                 parsedPackage.getSigningDetails(),
+-                                SigningDetails.CertCapabilities.ROLLBACK)) {
++                                SigningDetails.CertCapabilities.ROLLBACK)
++                                && !isResignAllowed(ps)) {
+                             throw new PrepareFailure(INSTALL_FAILED_UPDATE_INCOMPATIBLE,
+                                     "New package has a different signature: " + pkgName11);
+                         }
+diff --git a/services/core/java/com/android/server/pm/PackageManagerServiceUtils.java b/services/core/java/com/android/server/pm/PackageManagerServiceUtils.java
+index 03f4708c..cbb17a10 100644
+--- a/services/core/java/com/android/server/pm/PackageManagerServiceUtils.java
++++ b/services/core/java/com/android/server/pm/PackageManagerServiceUtils.java
+@@ -599,6 +599,17 @@ public class PackageManagerServiceUtils {
+         return false;
+     }
+ 
++    /**
++     * Whether an app that is not a system app may be updated with an APK
++     * signed with another key, keeping its data, permissions and device owner
++     * status. Only while persist.echo.pm.allow_resign is true, for testing a
++     * build signed with another key without uninstalling the app.
++     */
++    public static boolean isResignAllowed(PackageSetting pkgSetting) {
++        return !pkgSetting.isSystem()
++                && SystemProperties.getBoolean("persist.echo.pm.allow_resign", false);
++    }
++
+     /**
+      * Verifies that signatures match.
+      * @returns {@code true} if the compat signatures were matched; otherwise, {@code false}.
+@@ -640,6 +651,12 @@ public class PackageManagerServiceUtils {
+                 match = matchSignatureInSystem(pkgSetting, disabledPkgSetting);
+             }
+ 
++            if (!match && isResignAllowed(pkgSetting)) {
++                Slog.w(TAG, "Package " + packageName + " is signed with another key;"
++                        + " updating it anyway (persist.echo.pm.allow_resign)");
++                match = true;
++            }
++
+             if (!match) {
+                 throw new PackageManagerException(INSTALL_FAILED_UPDATE_INCOMPATIBLE,
+                         "Package " + packageName +
