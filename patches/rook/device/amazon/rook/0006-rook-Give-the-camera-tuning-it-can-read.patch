@@ -1,0 +1,369 @@
+rook: Give the camera tuning it can read
+
+The camera HAL comes from checkers and reads its defaults through
+GetCameraDefaultPara from libcameracustom_n, which only searches the
+OV9734 sensor list. The GC0312 tuning from libcameracustom_rook never
+reached it, the AE pline conversion included. Export
+GetCameraDefaultPara from the shim so the HAL gets the rook sensor's
+defaults.
+
+The rook ISP tuning is in an older layout than libcameracustom_n reads:
+with it, the picture is grey and overexposed by day and red at high gain.
+Take the ISP tuning from the OV9734 instead. The rook 3A data has the
+same layout, but its AE tuning overexposes with this AE algorithm, so
+keep the GC0312's gains, exposure units and AWB calibration and take the
+AE tuning from the OV9734.
+
+The OV9734 ISP tuning takes a black level of 64 off. That cuts into the
+GC0312's darker red and blue and turns the dim corners green, while the
+rook tuning's 0 leaves a magenta cast. Take off 32, which leaves corners
+and centre neutral. At the highest gain the GC0312 glows red towards the
+top and the sides even with the lens covered; the ISP uses OBC set 3
+there and set 2 in room light, so take off 64 in set 3 only, which
+leaves a covered lens black.
+
+The GC0312 runs at much higher gain than the OV9734, around ISO 1500
+indoors, and the OV9734 colour matrices amplify its colour noise. Keep
+60% of their distance from the identity, which cuts the colour noise by
+a quarter and leaves the colours close to what they were.
+
+In dim light the rook pline stops the exposure at 60 to 67 ms and
+raises the gain instead. Lengthen those exposures by whole multiples, so
+they stay in step with the mains flicker, up to 120 ms, and take the
+gain down by as much. Indoors the exposure goes from 60 to 120 ms at
+half the gain: the colour noise drops by another quarter and edges stay
+sharp instead of being smoothed away, at 8 frames a second in dim light.
+
+Light scattered in the small lens lifts the darkest parts of a picture
+in a lit room to about a fifth of the range, which leaves it milky. The
+ISP gamma curves map outputs below 220 of 1023 to black, with a soft
+knee, and stretch the rest to the full range.
+
+Measured on a Spot: a daylight frame went from an average luma of 207
+to 143 with neutral colour, a covered lens at ISO 2982 from a red
+average of 99 to black, and indoors the colour noise halved and the
+darkest 2% of a board game box went from 70 to 18.
+diff --git a/camera/libcameracustom_shim.cpp b/camera/libcameracustom_shim.cpp
+index f7473b0..55652b1 100644
+--- a/camera/libcameracustom_shim.cpp
++++ b/camera/libcameracustom_shim.cpp
+@@ -10,6 +10,7 @@
+ #include <stdint.h>
+ #include <string.h>
+ 
++#include <algorithm>
+ #include <memory>
+ #include <mutex>
+ 
+@@ -26,10 +27,47 @@ struct MSDK_SENSOR_INIT_FUNCTION_STRUCT {
+ };
+ static_assert(sizeof(MSDK_SENSOR_INIT_FUNCTION_STRUCT) == 56);
+ 
++struct NVRAM_CAMERA_ISP_PARAM_STRUCT;
++struct NVRAM_CAMERA_3A_STRUCT;
++struct NVRAM_CAMERA_SHADING_STRUCT;
++struct AE_PLINETABLE_T;
++
+ namespace {
+ 
++constexpr int kIspParam = 0;
++constexpr int k3AParam = 1;
++constexpr int kShadingParam = 2;
+ constexpr int kAePlineTable = 4;
+ 
++constexpr size_t kIspSize = 0xa0000;
++constexpr size_t k3ASize = 0x7c00;
++constexpr size_t kShadingSize = 0x10081c;
++
++// The black level the ISP takes off: an offset for each of the four Bayer
++// channels, then their gains, for each of the 40 OBC sets.
++constexpr size_t kObcOffset = 0x1220;
++constexpr size_t kObcSets = 40;
++constexpr size_t kObcSetWords = 8;
++constexpr uint32_t kGc0312BlackLevel = 32;
++// The set the ISP uses at the highest gain, in the dark.
++constexpr size_t kHighGainObcSet = 3;
++constexpr uint32_t kHighGainBlackLevel = 64;
++
++// The colour matrices, 3x3 coefficients at a unit of 256 in 11-bit fields,
++// two to a word in the first, third and fifth word of each row pair.
++constexpr size_t kCcmOffset = 0xa8e4;
++constexpr size_t kCcmCount = 4;
++constexpr size_t kCcmWords = 6;
++constexpr int kCcmUnit = 256;
++constexpr int kCcmStrengthPercent = 60;
++
++// The AE tuning in the 3A data, after the sensor's gains and exposure units
++// and before the AWB calibration.
++constexpr size_t kAeTuningStart = 0x94;
++constexpr size_t kAeTuningEnd = 0x560;
++
++constexpr uint32_t kOv9734SensorId = 0x9734;
++
+ constexpr size_t kPlineMappingSize = 0x5a0;
+ constexpr size_t kPlineTableCount = 50;
+ constexpr size_t kPlineTableSize = 6436;
+@@ -38,8 +76,33 @@ constexpr size_t kPlineTrailerSize = 9226;
+ constexpr size_t kOldPlineSize = 0x512b4;
+ constexpr size_t kNewPlineSize = 0x51380;
+ 
++// A pline entry: exposure in us, sensor gain and ISP gain at a unit of 1024,
++// then the iris, sensor mode and flag bytes.
++// Static gamma: per table a curve for red and blue, packed in the low and
++// high half of each word, then one for green in the low half.
++constexpr size_t kGgmOffset = 0xa944;
++constexpr size_t kGgmTables = 5;
++constexpr size_t kGgmCurves = 2;
++constexpr size_t kGgmEntries = 144;
++constexpr uint32_t kGgmMax = 1023;
++// Room light scatters in the lens and lifts the darkest parts of the picture
++// to about a fifth of the range.
++constexpr uint32_t kHazeLevel = 220;
++constexpr uint32_t kHazeKnee = 40;
++
++struct PlineEntry {
++    uint32_t exposureUs;
++    uint32_t sensorGain;
++    uint32_t ispGain;
++    uint32_t flags;
++};
++constexpr uint32_t kGainUnit = 1024;
++constexpr uint32_t kStretchFromUs = 50000;
++constexpr uint32_t kMaxExposureUs = 120000;
++
+ MSDK_SENSOR_INIT_FUNCTION_STRUCT sensorList[2];
+ int (*rookGetCameraDefault)(int, void*, uint32_t);
++int (*ov9734GetCameraDefault)(int, void*, uint32_t);
+ 
+ void convertPline(uint8_t* dst, const uint8_t* src) {
+     memset(dst, 0, kNewPlineSize);
+@@ -56,34 +119,194 @@ void convertPline(uint8_t* dst, const uint8_t* src) {
+     memcpy(dst, src, kPlineTrailerSize);
+ }
+ 
++bool isPlineEntry(const PlineEntry& entry) {
++    return entry.exposureUs <= 1000000 && entry.sensorGain >= kGainUnit &&
++           entry.sensorGain <= 256 * kGainUnit && entry.ispGain >= kGainUnit &&
++           entry.ispGain <= 16 * kGainUnit && (entry.flags & 0xff000000) == 0;
++}
++
++// In dim light the rook pline stops the exposure at 60 to 67 ms and raises
++// the gain, up to 24x, where the GC0312 is far noisier than the OV9734.
++// Lengthen those exposures by whole multiples, which keeps them in step with
++// the mains flicker, up to 120 ms and take the gain down by as much: the
++// picture is much cleaner, at 8 frames a second in dim light.
++void stretchExposures(uint8_t* pline) {
++    auto* words = reinterpret_cast<uint32_t*>(pline);
++    for (size_t i = 0; i + 4 <= kNewPlineSize / 4; i++) {
++        auto* entry = reinterpret_cast<PlineEntry*>(words + i);
++        if (entry->exposureUs < kStretchFromUs || !isPlineEntry(*entry))
++            continue;
++
++        uint64_t gain = static_cast<uint64_t>(entry->sensorGain) * entry->ispGain / kGainUnit;
++        uint64_t factor = std::min<uint64_t>(kMaxExposureUs / entry->exposureUs, gain / kGainUnit);
++        if (factor < 2)
++            continue;
++
++        uint64_t target = gain / factor;
++        if (target < entry->sensorGain) {
++            entry->sensorGain = std::max<uint64_t>(target, kGainUnit);
++            entry->ispGain = kGainUnit;
++        } else {
++            entry->ispGain = target * kGainUnit / entry->sensorGain;
++        }
++        entry->exposureUs *= factor;
++        i += 3;
++    }
++}
++
++// Maps a gamma output below the black point to black and stretches the rest
++// to the full range, with a soft knee around the black point.
++uint32_t dehazeOutput(uint32_t out) {
++    uint32_t lifted;
++    if (out + kHazeKnee <= kHazeLevel)
++        lifted = 0;
++    else if (out < kHazeLevel + kHazeKnee)
++        lifted = (out + kHazeKnee - kHazeLevel) * (out + kHazeKnee - kHazeLevel) / (4 * kHazeKnee);
++    else
++        lifted = out - kHazeLevel;
++    return std::min(kGgmMax, lifted * kGgmMax / (kGgmMax - kHazeLevel));
++}
++
++// Every other 16-bit entry of a gamma curve, each the output in 10 bits and
++// the step to the next entry above it.
++void dehaze(uint16_t* curve) {
++    bool used = false;
++    for (size_t i = 0; i < kGgmEntries; i++)
++        used |= curve[i * 2] != 0;
++    if (!used)
++        return;
++
++    uint32_t out[kGgmEntries];
++    for (size_t i = 0; i < kGgmEntries; i++)
++        out[i] = dehazeOutput(curve[i * 2] & 0x3ff);
++    for (size_t i = 0; i < kGgmEntries; i++) {
++        uint32_t next = i + 1 < kGgmEntries ? out[i + 1] : kGgmMax;
++        curve[i * 2] = out[i] | std::min(next - out[i], 0x3fu) << 10;
++    }
++}
++
++// Moves each coefficient towards the identity matrix, keeping the given share
++// of its distance from it.
++void softenCcm(uint32_t* words) {
++    int coeff[9];
++    for (size_t word = 0, i = 0; word < kCcmWords; word++) {
++        coeff[i++] = static_cast<int32_t>(words[word] << 21) >> 21;
++        if (word % 2 == 0)
++            coeff[i++] = static_cast<int32_t>((words[word] >> 16) << 21) >> 21;
++    }
++
++    for (int i = 0; i < 9; i++) {
++        int identity = i % 4 == 0 ? kCcmUnit : 0;
++        coeff[i] = identity + (coeff[i] - identity) * kCcmStrengthPercent / 100;
++    }
++
++    for (size_t word = 0, i = 0; word < kCcmWords; word++) {
++        words[word] = coeff[i++] & 0x7ff;
++        if (word % 2 == 0)
++            words[word] |= (coeff[i++] & 0x7ff) << 16;
++    }
++}
++
++// The rook ISP tuning is in an older layout than libcameracustom_n reads,
++// which leaves the picture grey by day and red at high gain. Use the OV9734
++// ISP tuning that libcameracustom_n was built with, under the rook sensor id.
++// The OV9734 black level of 64 cuts into the GC0312's darker red and blue,
++// which turns the dim corners green, so take off the GC0312's 32 instead.
++// At the highest gain the GC0312 glows red towards the top and the sides
++// even with the lens covered, and only a black level of 64 takes that off.
++// The GC0312 runs at much higher gain than the OV9734, and the OV9734 colour
++// matrices amplify its colour noise, so soften them. Light scattered in the
++// small lens leaves the picture milky in a lit room, so the gamma curves take
++// it off again.
++int getIspDefault(void* data, uint32_t size) {
++    int ret = ov9734GetCameraDefault(kIspParam, data, size);
++    if (ret != 0)
++        return ret;
++
++    auto* isp = static_cast<uint32_t*>(data);
++    isp[1] = sensorList[0].sensorId;
++    auto* obc = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(data) + kObcOffset);
++    for (size_t set = 0; set < kObcSets; set++) {
++        uint32_t level = set == kHighGainObcSet ? kHighGainBlackLevel : kGc0312BlackLevel;
++        for (size_t channel = 0; channel < 4; channel++)
++            obc[set * kObcSetWords + channel] = -level & 0x1fff;
++    }
++
++    auto* ccm = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(data) + kCcmOffset);
++    for (size_t i = 0; i < kCcmCount; i++)
++        softenCcm(ccm + i * kCcmWords);
++
++    auto* ggm = reinterpret_cast<uint16_t*>(static_cast<uint8_t*>(data) + kGgmOffset);
++    for (size_t curve = 0; curve < kGgmTables * kGgmCurves; curve++) {
++        dehaze(ggm + curve * kGgmEntries * 2);
++        dehaze(ggm + curve * kGgmEntries * 2 + 1);
++    }
++    return 0;
++}
++
++// The rook 3A data has the layout libcameracustom_n reads, but its AE tuning
++// overexposes with this AE algorithm. Keep the sensor's gains, exposure units
++// and AWB calibration and take the AE tuning from the OV9734.
++int get3ADefault(void* data, uint32_t size) {
++    int ret = rookGetCameraDefault(k3AParam, data, size);
++    if (ret != 0)
++        return ret;
++
++    std::unique_ptr<uint8_t[]> ov9734(new uint8_t[size]);
++    if (ov9734GetCameraDefault(k3AParam, ov9734.get(), size) == 0)
++        memcpy(static_cast<uint8_t*>(data) + kAeTuningStart, ov9734.get() + kAeTuningStart,
++               kAeTuningEnd - kAeTuningStart);
++    return 0;
++}
++
+ int getCameraDefault(int type, void* data, uint32_t size) {
++    if (data == nullptr)
++        return 1;
++
++    if (type == kIspParam && ov9734GetCameraDefault != nullptr)
++        return getIspDefault(data, size);
++    if (type == k3AParam && ov9734GetCameraDefault != nullptr)
++        return get3ADefault(data, size);
+     if (type != kAePlineTable)
+         return rookGetCameraDefault(type, data, size);
+ 
+-    if (data == nullptr || size < kNewPlineSize)
++    if (size < kNewPlineSize)
+         return 1;
+ 
+     std::unique_ptr<uint8_t[]> pline(new uint8_t[kOldPlineSize]);
+     int ret = rookGetCameraDefault(type, pline.get(), kOldPlineSize);
+-    if (ret == 0)
++    if (ret == 0) {
+         convertPline(static_cast<uint8_t*>(data), pline.get());
++        stretchExposures(static_cast<uint8_t*>(data));
++    }
+ 
+     return ret;
+ }
+ 
+-void init() {
+-    void* handle = dlopen("libcameracustom_rook.so", RTLD_NOW | RTLD_LOCAL);
+-    LOG_ALWAYS_FATAL_IF(handle == nullptr, "Failed to load libcameracustom_rook: %s", dlerror());
++MSDK_SENSOR_INIT_FUNCTION_STRUCT* getSensorList(const char* lib) {
++    void* handle = dlopen(lib, RTLD_NOW | RTLD_LOCAL);
++    LOG_ALWAYS_FATAL_IF(handle == nullptr, "Failed to load %s: %s", lib, dlerror());
+ 
+     auto getList = reinterpret_cast<uint32_t (*)(MSDK_SENSOR_INIT_FUNCTION_STRUCT**)>(
+             dlsym(handle, "_Z21GetSensorInitFuncListPP32MSDK_SENSOR_INIT_FUNCTION_STRUCT"));
+     MSDK_SENSOR_INIT_FUNCTION_STRUCT* list = nullptr;
+     LOG_ALWAYS_FATAL_IF(getList == nullptr || getList(&list) != 0 || list == nullptr,
+-                        "Failed to get the rook sensor list");
++                        "Failed to get the sensor list of %s", lib);
++    return list;
++}
+ 
+-    memcpy(sensorList, list, sizeof(sensorList));
++void init() {
++    memcpy(sensorList, getSensorList("libcameracustom_rook.so"), sizeof(sensorList));
+     rookGetCameraDefault = sensorList[0].getCameraDefault;
+     sensorList[0].getCameraDefault = getCameraDefault;
++
++    for (auto* entry = getSensorList("libcameracustom_n.so"); entry->sensorId != 0; entry++) {
++        if (entry->sensorId == kOv9734SensorId) {
++            ov9734GetCameraDefault = entry->getCameraDefault;
++            break;
++        }
++    }
++    ALOGE_IF(ov9734GetCameraDefault == nullptr, "No OV9734 tuning in libcameracustom_n");
+ }
+ 
+ }  // namespace
+@@ -98,3 +321,27 @@ uint32_t GetSensorInitFuncList(MSDK_SENSOR_INIT_FUNCTION_STRUCT** list) {
+     *list = sensorList;
+     return 0;
+ }
++
++// libfeatureiodrv reads the defaults through this rather than the sensor
++// list, and the libcameracustom_n one only knows the OV9734.
++uint32_t GetCameraDefaultPara(uint32_t sensorId, NVRAM_CAMERA_ISP_PARAM_STRUCT* isp,
++                              NVRAM_CAMERA_3A_STRUCT* nvram3a, NVRAM_CAMERA_SHADING_STRUCT* shading,
++                              AE_PLINETABLE_T* pline) {
++    MSDK_SENSOR_INIT_FUNCTION_STRUCT* list = nullptr;
++    GetSensorInitFuncList(&list);
++    if (sensorId != list[0].sensorId) {
++        ALOGE("No camera defaults for sensor %#x", sensorId);
++        return 1;
++    }
++
++    int ret = 0;
++    if (isp != nullptr)
++        ret |= getCameraDefault(kIspParam, isp, kIspSize);
++    if (nvram3a != nullptr)
++        ret |= getCameraDefault(k3AParam, nvram3a, k3ASize);
++    if (shading != nullptr)
++        ret |= getCameraDefault(kShadingParam, shading, kShadingSize);
++    if (pline != nullptr)
++        ret |= getCameraDefault(kAePlineTable, pline, kNewPlineSize);
++    return ret;
++}
