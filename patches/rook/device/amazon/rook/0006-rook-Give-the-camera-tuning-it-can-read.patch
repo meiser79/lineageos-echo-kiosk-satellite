@@ -1,0 +1,171 @@
+rook: Give the camera tuning it can read
+
+The camera HAL comes from checkers and reads its defaults through
+GetCameraDefaultPara from libcameracustom_n, which only searches the
+OV9734 sensor list. The GC0312 tuning from libcameracustom_rook never
+reached it, the AE pline conversion included. Export
+GetCameraDefaultPara from the shim so the HAL gets the rook sensor's
+defaults.
+
+The rook ISP tuning is in an older layout than libcameracustom_n reads:
+with it, the picture is grey and overexposed by day and red at high gain.
+Take the ISP tuning from the OV9734 instead. The rook 3A data has the
+same layout, but its AE tuning overexposes with this AE algorithm, so
+keep the GC0312's gains, exposure units and AWB calibration and take the
+AE tuning from the OV9734.
+
+Measured on a Spot: a daylight frame went from an average luma of 207
+to 143 with neutral colour, and a covered lens at ISO 2982 from a red
+average of 99 to a neutral 18.
+
+diff --git a/camera/libcameracustom_shim.cpp b/camera/libcameracustom_shim.cpp
+index f7473b0..3153a6b 100644
+--- a/camera/libcameracustom_shim.cpp
++++ b/camera/libcameracustom_shim.cpp
+@@ -26,10 +26,29 @@ struct MSDK_SENSOR_INIT_FUNCTION_STRUCT {
+ };
+ static_assert(sizeof(MSDK_SENSOR_INIT_FUNCTION_STRUCT) == 56);
+ 
++struct NVRAM_CAMERA_ISP_PARAM_STRUCT;
++struct NVRAM_CAMERA_3A_STRUCT;
++struct NVRAM_CAMERA_SHADING_STRUCT;
++struct AE_PLINETABLE_T;
++
+ namespace {
+ 
++constexpr int kIspParam = 0;
++constexpr int k3AParam = 1;
++constexpr int kShadingParam = 2;
+ constexpr int kAePlineTable = 4;
+ 
++constexpr size_t kIspSize = 0xa0000;
++constexpr size_t k3ASize = 0x7c00;
++constexpr size_t kShadingSize = 0x10081c;
++
++// The AE tuning in the 3A data, after the sensor's gains and exposure units
++// and before the AWB calibration.
++constexpr size_t kAeTuningStart = 0x94;
++constexpr size_t kAeTuningEnd = 0x560;
++
++constexpr uint32_t kOv9734SensorId = 0x9734;
++
+ constexpr size_t kPlineMappingSize = 0x5a0;
+ constexpr size_t kPlineTableCount = 50;
+ constexpr size_t kPlineTableSize = 6436;
+@@ -40,6 +59,7 @@ constexpr size_t kNewPlineSize = 0x51380;
+ 
+ MSDK_SENSOR_INIT_FUNCTION_STRUCT sensorList[2];
+ int (*rookGetCameraDefault)(int, void*, uint32_t);
++int (*ov9734GetCameraDefault)(int, void*, uint32_t);
+ 
+ void convertPline(uint8_t* dst, const uint8_t* src) {
+     memset(dst, 0, kNewPlineSize);
+@@ -56,11 +76,43 @@ void convertPline(uint8_t* dst, const uint8_t* src) {
+     memcpy(dst, src, kPlineTrailerSize);
+ }
+ 
++// The rook ISP tuning is in an older layout than libcameracustom_n reads,
++// which leaves the picture grey by day and red at high gain. Use the OV9734
++// ISP tuning that libcameracustom_n was built with, under the rook sensor id.
++int getIspDefault(void* data, uint32_t size) {
++    int ret = ov9734GetCameraDefault(kIspParam, data, size);
++    if (ret == 0)
++        static_cast<uint32_t*>(data)[1] = sensorList[0].sensorId;
++    return ret;
++}
++
++// The rook 3A data has the layout libcameracustom_n reads, but its AE tuning
++// overexposes with this AE algorithm. Keep the sensor's gains, exposure units
++// and AWB calibration and take the AE tuning from the OV9734.
++int get3ADefault(void* data, uint32_t size) {
++    int ret = rookGetCameraDefault(k3AParam, data, size);
++    if (ret != 0)
++        return ret;
++
++    std::unique_ptr<uint8_t[]> ov9734(new uint8_t[size]);
++    if (ov9734GetCameraDefault(k3AParam, ov9734.get(), size) == 0)
++        memcpy(static_cast<uint8_t*>(data) + kAeTuningStart, ov9734.get() + kAeTuningStart,
++               kAeTuningEnd - kAeTuningStart);
++    return 0;
++}
++
+ int getCameraDefault(int type, void* data, uint32_t size) {
++    if (data == nullptr)
++        return 1;
++
++    if (type == kIspParam && ov9734GetCameraDefault != nullptr)
++        return getIspDefault(data, size);
++    if (type == k3AParam && ov9734GetCameraDefault != nullptr)
++        return get3ADefault(data, size);
+     if (type != kAePlineTable)
+         return rookGetCameraDefault(type, data, size);
+ 
+-    if (data == nullptr || size < kNewPlineSize)
++    if (size < kNewPlineSize)
+         return 1;
+ 
+     std::unique_ptr<uint8_t[]> pline(new uint8_t[kOldPlineSize]);
+@@ -71,19 +123,30 @@ int getCameraDefault(int type, void* data, uint32_t size) {
+     return ret;
+ }
+ 
+-void init() {
+-    void* handle = dlopen("libcameracustom_rook.so", RTLD_NOW | RTLD_LOCAL);
+-    LOG_ALWAYS_FATAL_IF(handle == nullptr, "Failed to load libcameracustom_rook: %s", dlerror());
++MSDK_SENSOR_INIT_FUNCTION_STRUCT* getSensorList(const char* lib) {
++    void* handle = dlopen(lib, RTLD_NOW | RTLD_LOCAL);
++    LOG_ALWAYS_FATAL_IF(handle == nullptr, "Failed to load %s: %s", lib, dlerror());
+ 
+     auto getList = reinterpret_cast<uint32_t (*)(MSDK_SENSOR_INIT_FUNCTION_STRUCT**)>(
+             dlsym(handle, "_Z21GetSensorInitFuncListPP32MSDK_SENSOR_INIT_FUNCTION_STRUCT"));
+     MSDK_SENSOR_INIT_FUNCTION_STRUCT* list = nullptr;
+     LOG_ALWAYS_FATAL_IF(getList == nullptr || getList(&list) != 0 || list == nullptr,
+-                        "Failed to get the rook sensor list");
++                        "Failed to get the sensor list of %s", lib);
++    return list;
++}
+ 
+-    memcpy(sensorList, list, sizeof(sensorList));
++void init() {
++    memcpy(sensorList, getSensorList("libcameracustom_rook.so"), sizeof(sensorList));
+     rookGetCameraDefault = sensorList[0].getCameraDefault;
+     sensorList[0].getCameraDefault = getCameraDefault;
++
++    for (auto* entry = getSensorList("libcameracustom_n.so"); entry->sensorId != 0; entry++) {
++        if (entry->sensorId == kOv9734SensorId) {
++            ov9734GetCameraDefault = entry->getCameraDefault;
++            break;
++        }
++    }
++    ALOGE_IF(ov9734GetCameraDefault == nullptr, "No OV9734 tuning in libcameracustom_n");
+ }
+ 
+ }  // namespace
+@@ -98,3 +161,27 @@ uint32_t GetSensorInitFuncList(MSDK_SENSOR_INIT_FUNCTION_STRUCT** list) {
+     *list = sensorList;
+     return 0;
+ }
++
++// libfeatureiodrv reads the defaults through this rather than the sensor
++// list, and the libcameracustom_n one only knows the OV9734.
++uint32_t GetCameraDefaultPara(uint32_t sensorId, NVRAM_CAMERA_ISP_PARAM_STRUCT* isp,
++                              NVRAM_CAMERA_3A_STRUCT* nvram3a, NVRAM_CAMERA_SHADING_STRUCT* shading,
++                              AE_PLINETABLE_T* pline) {
++    MSDK_SENSOR_INIT_FUNCTION_STRUCT* list = nullptr;
++    GetSensorInitFuncList(&list);
++    if (sensorId != list[0].sensorId) {
++        ALOGE("No camera defaults for sensor %#x", sensorId);
++        return 1;
++    }
++
++    int ret = 0;
++    if (isp != nullptr)
++        ret |= getCameraDefault(kIspParam, isp, kIspSize);
++    if (nvram3a != nullptr)
++        ret |= getCameraDefault(k3AParam, nvram3a, k3ASize);
++    if (shading != nullptr)
++        ret |= getCameraDefault(kShadingParam, shading, kShadingSize);
++    if (pline != nullptr)
++        ret |= getCameraDefault(kAePlineTable, pline, kNewPlineSize);
++    return ret;
++}
