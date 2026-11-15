@@ -15,7 +15,7 @@ One LineageOS 18.1 tree builds every device. It is R0rt1z2's LineageOS 18.1 port
 | `sources/device/amazon/<device>/` | A device tree of this repository's own, where amazon-oss has none. It is staged as `device/amazon/<device>` |
 | `blobs/<device>/` | The proprietary files a device takes from its Fire OS image, each with its checksum |
 | `docker/` | The build container |
-| `scripts/` | Sync, stage, build and release signing |
+| `scripts/` | Sync, stage, build, release signing and releases |
 | `tests/` | Checks that run on the host |
 
 Patches follow the amazon-oss layout: `patches/<set>/<project path>/NNNN-*.patch`, for example `patches/crown/device/amazon/crown/0001-crown-Inherit-the-Kiosk-Satellite-Edition-layer.patch`. Staging applies amazon-oss's own `patches/` project first, then `patches/common` and then the device's set. Every device shares one tree, so when the list of patches changes the files any patch touches go back to their synced state before the patches apply again.
@@ -95,3 +95,5 @@ To make a release, here of the Echo Dot. For an Echo Show, use its codename and 
 6. Publish a GitHub release tagged `biscuit-2026.10.12` and titled `Echo Dot (2nd gen) 2026.10.12`. Attach the zip, its `.sig` and its `.sha256`.
 
 A release without a signed zip can only be installed by hand.
+
+`make release DEVICE=<device>` does steps 3, 4 and 6 after the build. See [Releasing with the script](releasing.md).
